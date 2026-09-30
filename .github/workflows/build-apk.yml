@@ -18,11 +18,15 @@ jobs:
       with:
         node-version: '22'
 
-    - name: Set up JDK 17
+    - name: Set up JDK 21
       uses: actions/setup-java@v5
       with:
-        java-version: '17'
+        java-version: '21'
         distribution: 'temurin'
+
+    - name: Accept Android SDK Licenses
+      run: |
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
 
     - name: Build Android APK
       run: |
@@ -37,7 +41,8 @@ jobs:
           npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
           echo '{"appId":"com.budget.app","appName":"Бюджет План","webDir":"dist"}' > capacitor.config.json
           rm -f capacitor.config.ts
-          npx cap add android
+          npx cap add android || true
+          npx cap sync android
           cd android
           chmod +x ./gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
