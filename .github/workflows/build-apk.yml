@@ -13,20 +13,41 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
     - name: Set up JDK 17
       uses: actions/setup-java@v5
       with:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Make gradlew executable
-      run: chmod +x ./gradlew
-
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug --no-daemon --stacktrace
+    - name: Build Android APK
+      run: |
+        if [ -f "./gradlew" ] && [ -d "./app" ]; then
+          echo "--> Found native Kotlin project in root. Building..."
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+        else
+          echo "--> No native Android project in root. Packaging Web App into Android APK via Capacitor..."
+          npm install --legacy-peer-deps
+          npm run build
+          npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
+          npx cap init "Бюджет План" "com.budget.app" --web-dir dist
+          npx cap add android
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+          cd ..
+        fi
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: budget-app-debug
-        path: app/build/outputs/apk/debug/*.apk
+        path: |
+          app/build/outputs/apk/debug/*.apk
+          android/app/build/outputs/apk/debug/*.apk
+        if-no-files-found: error
